@@ -45,7 +45,8 @@ class APIFootball:
                 )
                 matches.append(match)
         else:
-            print("Error fetching matches!")
+            print(f"Error fetching data! Status Code: {response.status_code}")
+            print(response.text)
         return matches
 
     @classmethod
@@ -56,6 +57,9 @@ class APIFootball:
             leagues = response.json()["response"]
             league_codes = {league["name"]: league["id"] for league in leagues}
             return league_codes
+        else:
+            print(f"Error fetching data! Status Code: {response.status_code}")
+            print(response.text)
         return {}
 
     @classmethod
@@ -66,6 +70,9 @@ class APIFootball:
             teams = response.json()["response"]
             team_codes = {team["team"]["name"]: team["team"]["id"] for team in teams}
             return team_codes
+        else:
+            print(f"Error fetching data! Status Code: {response.status_code}")
+            print(response.text)
         return {}
 
 
