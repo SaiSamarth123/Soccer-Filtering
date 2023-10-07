@@ -13,21 +13,22 @@ class Match:
 
 class APIFootball:
     BASE_URL = "https://api-football-v1.p.rapidapi.com/v3/"
-
     HEADERS = {
         "x-rapidapi-host": "api-football-v1.p.rapidapi.com",
-        "x-rapidapi-key": "YOUR_API_KEY_HERE",
+        "x-rapidapi-key": "ab29a72b20b7baa8ee24cf05ff50c146E",
     }
 
     @classmethod
     def get_matches(cls, league=None, team=None, player=None):
         params = {}
         if league:
-            params["league"] = league
+            league_codes = cls.get_league_code(league)
+            if league in league_codes:
+                params["league"] = league_codes[league]
         if team:
-            params["team"] = team
-        if player:
-            params["player"] = player
+            team_codes = cls.get_team_code(team)
+            if team in team_codes:
+                params["team"] = team_codes[team]
 
         url = cls.BASE_URL + "fixtures"
         response = requests.get(url, headers=cls.HEADERS, params=params)
@@ -48,54 +49,33 @@ class APIFootball:
         return matches
 
     @classmethod
-    def get_teams(cls, league, season="2023"):
-        url = cls.BASE_URL + f"teams?league={league}&season={season}"
-        response = requests.get(url, headers=cls.HEADERS)
-        teams = {}
-        if response.ok:
-            for team in response.json()["response"]:
-                teams[team["team"]["name"]] = team["team"]["id"]
-        else:
-            print("Error fetching teams!")
-        return teams
-
-    @classmethod
-    def get_league_code(cls, league_name):
-        response = requests.get(
-            "https://v3.football.api-sports.io/leagues", headers=cls.HEADERS
-        )
-        if response.ok:
-            for league in response.json()["response"]:
-                if league["league"]["name"].lower() == league_name.lower():
-                    return league["league"]["id"]
-        print("League not found!")
-        return None
-
-    @classmethod
-    def get_team_code(cls, team_name, league_code=None):
-        url = "https://v3.football.api-sports.io/teams"
-        if league_code:
-            url += f"?league={league_code}"
-
+    def get_league_code(cls, country):
+        url = cls.BASE_URL + f"leagues?country={country}"
         response = requests.get(url, headers=cls.HEADERS)
         if response.ok:
-            for team in response.json()["response"]:
-                if team["team"]["name"].lower() == team_name.lower():
-                    return team["team"]["id"]
-        print("Team not found!")
-        return None
+            leagues = response.json()["response"]
+            league_codes = {league["name"]: league["id"] for league in leagues}
+            return league_codes
+        return {}
 
     @classmethod
-    def get_player_code(cls, player_name):
-        url = f"https://v3.football.api-sports.io/players?search={player_name}"
-
+    def get_team_code(cls, team_name):
+        url = cls.BASE_URL + f"teams?search={team_name}"
         response = requests.get(url, headers=cls.HEADERS)
         if response.ok:
-            for player in response.json()["response"]:
-                if player["player"]["name"].lower() == player_name.lower():
-                    return player["player"]["id"]
-        print("Player not found!")
-        return None
+            teams = response.json()["response"]
+            team_codes = {team["team"]["name"]: team["team"]["id"] for team in teams}
+            return team_codes
+        return {}
+
+
+def display_matches(matches):
+    print("\nMatches:")
+    for match in matches:
+        print(f"Date: {match.date} Time: {match.time}")
+        print(f"{match.team1} vs {match.team2}")
+        print(f"League: {match.league}")
+        print(f"Venue: {match.venue}\n")
 
 
 def main():
@@ -104,40 +84,24 @@ def main():
         print("\nMain Menu:")
         print("1. View Matches by Team")
         print("2. View Matches by League")
-        print("3. View Matches by Player")
-        print("4. Exit")
-        choice = input("Please choose an option (1-4): ")
+        print("3. Exit")
+        choice = input("Please choose an option (1-3): ")
 
         if choice == "1":
             team_name = input("Enter team name: ")
-            team_code = APIFootball.get_team_code(team_name)
-            matches = APIFootball.get_matches(team=team_code)
+            matches = APIFootball.get_matches(team=team_name)
             display_matches(matches)
         elif choice == "2":
-            league_name = input("Enter league name: ")
-            league_code = APIFootball.get_league_code(league_name)
-            matches = APIFootball.get_matches(league=league_code)
+            league_name = input(
+                "Enter league name (Country Name e.g. England, Spain): "
+            )
+            matches = APIFootball.get_matches(league=league_name)
             display_matches(matches)
         elif choice == "3":
-            player_name = input("Enter player name: ")
-            player_code = APIFootball.get_player_code(player_name)
-            matches = APIFootball.get_matches(player=player_code)
-            display_matches(matches)
-        elif choice == "4":
             print("Exiting. Goodbye!")
             break
         else:
             print("Invalid option. Please try again.")
-
-
-def display_matches(matches):
-    if matches:
-        for match in matches:
-            print(
-                f"{match.team1} vs {match.team2} - {match.date} {match.time} - {match.venue}"
-            )
-    else:
-        print("No matches found!")
 
 
 if __name__ == "__main__":
@@ -145,13 +109,10 @@ if __name__ == "__main__":
 
 
 # url = "https://v3.football.api-sports.io/{endpoint}"
-
 # payload={}
 # headers = {
 #   'x-rapidapi-key': 'XxXxXxXxXxXxXxXxXxXxXxXx',
 #   'x-rapidapi-host': 'v3.football.api-sports.io'
 # }
-
 # response = requests.request("GET", url, headers=headers, data=payload)
-
 # print(response.text)
